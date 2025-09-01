@@ -2829,7 +2829,21 @@ fn render_call_locations<W: fmt::Write>(
                 file.start_pos + BytePos(byte_max),
             ))
         })()
-        .unwrap_or(DUMMY_SP);
+        .unwrap_or_else(|| {
+            let local = tcx.sess.local_crate_source_file().unwrap();
+            let files = tcx.sess.source_map().files();
+            let file = files
+                .iter()
+                .find(|file| match &file.name {
+                    FileName::Real(file_name) => file_name == &local,
+                    _ => false,
+                })
+                .unwrap();
+            rustc_span::Span::with_root_ctxt(
+                file.start_pos + BytePos(byte_min),
+                file.start_pos + BytePos(byte_max),
+            )
+        });
 
         let mut decoration_info = FxIndexMap::default();
         decoration_info.insert("highlight focus", vec![byte_ranges.remove(0)]);
